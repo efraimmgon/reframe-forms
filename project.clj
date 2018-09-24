@@ -1,5 +1,5 @@
 (defproject reframe-forms "0.1.0-SNAPSHOT"
-  :description "HTML input components for use with re-frame."
+  :description "Form components for re-frame."
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0"]

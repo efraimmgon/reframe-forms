@@ -20,6 +20,21 @@
                       (string/split (name k) "."))
                 (string/split (name k) ".")))))))
 
+(rf/reg-sub
+  :query
+  (fn [db [_ path]]
+    (get-in db (vec-of-keys path))))
+
+(rf/reg-event-db
+  :set
+  (fn [db [_ path val]]
+    (assoc-in db (vec-of-keys path) val)))
+
+(rf/reg-event-db
+  :update
+  (fn [db [_ path f]]
+    (update-in db (vec-of-keys path) f)))
+
 
 ; -----------------------------------------------------------------------------
 ; Input Components Utils
@@ -31,7 +46,7 @@
 (defn target-value [event]
   (.-value (.-target event)))
 
-(defn format-number [event]
+(defn parse-number [event]
   (when-not (empty? (target-value event))
     (let [parsed (js/parseFloat n)]
       (when-not (js/isNaN parsed)
@@ -83,7 +98,7 @@
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
         edited-attrs (-> attrs
-                         (attrs-on-change-set (comp format-number target-value))
+                         (attrs-on-change-set (comp parse-number target-value))
                          (attrs-value stored-val))]
     [:input edited-attrs]))
 
