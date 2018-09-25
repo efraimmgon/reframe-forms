@@ -1,6 +1,6 @@
 (ns reframe-forms.core
   (:require
-   [cljs.reader as reader]
+   [cljs.reader :as reader]
    [clojure.string :as string]
    [reagent.core :as r]
    [re-frame.core :as rf]))
@@ -9,16 +9,20 @@
 ; setting the default value of the :name path to be the one you want
 ; to be the default.
 
-(def vec-of-keys
-  (memoize
-    (fn [x]
-      (if (vector? x)
-        x
-        (mapv keyword-or-int
-              (if (qualified-keyword? x)
-                (into (string/split (namespace k) ".")
-                      (string/split (name k) "."))
-                (string/split (name k) ".")))))))
+(defn- keyword-or-int [x]
+  (let [parsed (js/parseInt x)]
+    (if (int? parsed)
+      parsed
+      (keyword x))))
+
+(defn vec-of-keys [x]
+  (if (vector? x)
+    x
+    (mapv keyword-or-int
+          (if (qualified-keyword? x)
+            (into (string/split (namespace x) ".")
+                  (string/split (name x) "."))
+            (string/split (name x) ".")))))
 
 (rf/reg-sub
   :query
@@ -46,9 +50,9 @@
 (defn target-value [event]
   (.-value (.-target event)))
 
-(defn parse-number [event]
-  (when-not (empty? (target-value event))
-    (let [parsed (js/parseFloat n)]
+(defn parse-number [string]
+  (when-not (empty? string)
+    (let [parsed (js/parseFloat string)]
       (when-not (js/isNaN parsed)
         parsed))))
 
@@ -119,13 +123,13 @@
                          (assoc :checked (= value @stored-val)))]
     [:input edited-attrs]))
                           
-((defmethod input :checkbox
+(defmethod input :checkbox
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
         edited-attrs (-> attrs
                          (attrs-on-change-update not)
-                         (assoc :checked @stored-val))]
-    [:input edited-attrs])))
+                         (assoc :checked (boolean @stored-val)))]
+    [:input edited-attrs]))
 
 (defn select 
   [attrs options]
@@ -142,7 +146,10 @@
 (def datetime-format "yyyy-mm-ddT03:00:00.000Z")
 
 ; NOTE: REQUIRES 
+; "bootstrap.min.css"
+; "bootstrap.min.js"
 ; "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/css/bootstrap-datepicker.min.css" 
+; "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/js/bootstrap-datepicker.min.js"
 (defn datepicker
   [attrs]
   (r/create-class
