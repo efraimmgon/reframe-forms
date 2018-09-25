@@ -8,15 +8,15 @@ A ClojureScript library to provide form data bindings for [re-frame](https://git
 
 ## Usage
 
-`input` creates an input tag based on the :type key.
+`input` creates an input tag based on the `:type` key.
 
-Data binding occurs based on the `:name` key. The name key is destructured and used as a location in the app-db. `:blog.post/title`, for instance, will  point to `{:blog {:post {:title input-data-here}}}`.
+Data binding occurs based on the `:name` key. The name key is destructured and used as a location in the `app-db`. `:blog.post/title`, for instance, will  point to `{:blog {:post {:title input-data-here}}}`.
 
-The `:radio` input requires a `:value` attribute, and the `textarea`, `select`, and the `datepicker` tags are defined as a separate functions.
+The `:radio` input requires a `:value` attribute, and the `textarea`, `select`, and the `datepicker` tags are defined as separate functions.
 
 You can pass a `:format` (string) attribute for the `datepicker` input, representing the display format. The date value is stored as a timestamp int.
 
-The `select` input takes an optional `:multiple` attribute. If it is truthy, select will select one or more values (into a set), and if false it will select a single option. As a second parameter `select` takes a coll of options with a `:value` attribute:
+The `select` input takes an optional `:multiple` attribute. If it is truthy, one or more values can be selected (into a set), and if falsey only one. As a second parameter `select` takes a coll of options with a `:value` attribute:
 
 ```clojure
 [select {:name :user/country, :multiple true}
@@ -25,7 +25,7 @@ The `select` input takes an optional `:multiple` attribute. If it is truthy, sel
     [:option {:value "Portugal"}]]
 ```
 
-To set default values for the inputs you must use re-frame to set a value to the location of the :name attribute of the input. For instance, in the previous example, if we want `select` to have "Portugal" as its default value, we must set the :country key somehow,
+To set default values for the inputs you must set the value to the location of the :name attribute of the input. For instance, in the previous example, if we want `select` to have "Portugal" as its default value, we must set the :country key somehow,
 
 ```clojure
 (rf/dispatch [:set [:user :country] #{"Portugal"}])
@@ -41,34 +41,37 @@ Here is an example usage of several input types:
    [re-frame.core :as rf]
    [reframe-forms.core :refer [input textarea datepicker]]))
 
-(defn blog-post-form []
-  [:div 
-   [form-group
-     "Title *"
-     [input {:type :text
-             :name :blog.post/title
-             :class "form-control"}]]
-   [form-group
-     "Status *"
-     [:label.form-check-label
-       [input {:type :radio
-               :name :blog.post/status
-               :value "draft"
-               :class "form-check-input"}]
-       " Draft"]
-     [:label.form-check-label
-      [input {:type :radio
-              :name :blog.post/status
-              :value "published"
-              :class "form-check-input"}]
-      " Published"]]
-   [form-group
-     "Content *"
-     [textarea {:name :blog.post/content
-                :class "form-control"}]]
-   [form-group
-     "Published at"
-     [datepicker {:name :blog.post/published-at}]]])
+(defn blog-post-form [fields]
+  (when (nil? @fields)
+    (rf/dispatch [:set :blog.post/status "published"]))
+  (fn []
+    [:div 
+     [form-group
+       "Title *"
+       [input {:type :text
+               :name :blog.post/title
+               :class "form-control"}]]
+     [form-group
+       "Status *"
+       [:label.form-check-label
+         [input {:type :radio
+                 :name :blog.post/status
+                 :value "draft"
+                 :class "form-check-input"}]
+         " Draft"]
+       [:label.form-check-label
+        [input {:type :radio
+                :name :blog.post/status
+                :value "published"
+                :class "form-check-input"}]
+        " Published"]]
+     [form-group
+       "Content *"
+       [textarea {:name :blog.post/content
+                  :class "form-control"}]]
+     [form-group
+       "Published at"
+       [datepicker {:name :blog.post/published-at}]]]))
 
 ; Create the UI for the user and handle the forms data in the
 ; usual re-frame way.
@@ -85,11 +88,9 @@ Here is an example usage of several input types:
            "Save post"]]]
        :content
        [:div
-        [post-form-template fields]]}]]))
+        [blog-post-form fields]]}]]))
 
 ```
-
-
 
 ## License
 
