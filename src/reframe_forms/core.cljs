@@ -140,13 +140,21 @@
     (.getTime
       (js/Date. date-string))))
 
+(defn- to-iso-string
+  "Takes a string in the format 'yyyy-mm-dd' and returns a ISO date string.
+  If date-string is empty, returns nil." 
+  [date-string]
+  (when-not (clojure.string/blank? date-string)
+    (.toISOString
+      (js/Date. date-string))))
+
 (defn- to-date-format 
-  "Takes timestamp (int) and retuns a string in the format 'yyyy-mm-dd'.
-  If timestamp is nil, returns an empty string."
-  [timestamp]
-  (if (nil? timestamp)
+  "Takes a value that can be passed to js/Date. and retuns a string in 
+  the format 'yyyy-mm-dd'. If x is nil, returns an empty string."
+  [x]
+  (if (nil? x)
     ""
-    (-> (js/Date. timestamp)
+    (-> (js/Date. x)
         .toISOString
         (clojure.string/split #"T")
         first)))
@@ -155,7 +163,7 @@
   [attrs]
   ; :value must be a string in the format "yyyy-mm-dd".
   (let [{:keys [name save-fn value-fn]
-         :or {save-fn to-timestamp
+         :or {save-fn to-iso-string
               value-fn to-date-format}} attrs
         stored-val (get-stored-val name)
         edited-attrs (-> attrs
