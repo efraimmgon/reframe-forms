@@ -12,9 +12,7 @@ A ClojureScript library to provide form data bindings for [re-frame](https://git
 
 Data binding occurs based on the `:name` key. The name key is destructured and used as a location in the `app-db`. `:blog.post/title`, for instance, will  point to `{:blog {:post {:title input-data-here}}}`.
 
-The `:radio` input requires a `:value` attribute, and the `textarea`, `select`, and the `datepicker` tags are defined as separate functions.
-
-You can pass a `:format` (string) attribute for the `datepicker` input, representing the display format. The date value is stored as a timestamp int.
+The `:radio` input requires a `:value` attribute, and the `textarea`, `select` tags are defined as separate functions.
 
 The `select` input takes an optional `:multiple` attribute. If it is truthy, one or more values can be selected (into a set), and if falsey only one. As a second parameter `select` takes a coll of options with a `:value` attribute:
 
@@ -39,7 +37,7 @@ Here is an example usage of several input types:
    [my-website.components :refer [card form-group]]
    [reagent.core :as r]
    [re-frame.core :as rf]
-   [reframe-forms.core :refer [input textarea datepicker]]))
+   [reframe-forms.core :refer [input textarea]]))
 
 (defn blog-post-form [fields]
   (when (nil? @fields)
@@ -71,7 +69,9 @@ Here is an example usage of several input types:
                   :class "form-control"}]]
      [form-group
        "Published at"
-       [datepicker {:name :blog.post/published-at}]]]))
+       [input {:type :date
+               :class "form-control"
+               :name :blog.post/published-at}]]]))
 
 ; Create the UI for the user and handle the forms data in the
 ; usual re-frame way.
