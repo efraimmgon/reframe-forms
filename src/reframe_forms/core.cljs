@@ -39,7 +39,6 @@
   (fn [db [_ path f]]
     (update-in db (vec-of-keys path) f)))
 
-
 ; -----------------------------------------------------------------------------
 ; Input Components Utils
 ; -----------------------------------------------------------------------------
@@ -131,6 +130,46 @@
                          (assoc :checked (boolean @stored-val)))]
     [:input edited-attrs]))
 
+; Uses plain HTML5 <input type="date" />
+
+(defn- to-timestamp 
+  "Takes a string in the format 'yyyy-mm-dd' and returns a timestamp (int).
+  If date-string is empty, returns nil."
+  [date-string]
+  (when-not (clojure.string/blank? date-string)
+    (.getTime
+      (js/Date. date-string))))
+
+(defn- to-date-format 
+  "Takes timestamp (int) and retuns a string in the format 'yyyy-mm-dd'.
+  If timestamp is nil, returns an empty string."
+  [timestamp]
+  (if (nil? timestamp)
+    ""
+    (-> (js/Date. timestamp)
+        .toISOString
+        (clojure.string/split #"T")
+        first)))
+      
+(defmethod input :date  
+  [attrs]
+  ; :value must be a string in the format "yyyy-mm-dd".
+  (let [{:keys [name save-fn value-fn]
+         :or {save-fn to-timestamp
+              value-fn to-date-format}} attrs
+        stored-val (get-stored-val name)
+        edited-attrs (-> attrs
+                         (attrs-on-change-set (comp save-fn target-value))
+                         (assoc :value (value-fn @stored-val))
+                         ;; If no browser support and it degrades to a text
+                         ;; input, then at least we'll display the expected
+                         ;; format, and ...
+                         (update :placeholder #(or % "yyyy-mm-dd"))
+                         ;; ... we'll display an error message the wrong 
+                         ;; format is submitted.
+                         (update :pattern #(or % "[0-9]{4}-[0-9]{2}-[0-9]{2}")))]
+    [:input edited-attrs]))
+
 (defn select 
   [attrs options]
   (let [{:keys [name multiple]} attrs
@@ -142,9 +181,11 @@
     [:selected edited-attrs
      options]))
 
+;;; TODO: try Pickaday datepicker
 
 (def datetime-format "yyyy-mm-ddT03:00:00.000Z")
 
+; NOTE: only with Bootstrap 3
 ; NOTE: REQUIRES 
 ; "bootstrap.min.css"
 ; "bootstrap.min.js"
@@ -160,10 +201,10 @@
        (let [edited-attrs (-> attrs
                               (assoc :type :text)
                               (update :class str " form-control"))]
-        [:div.input-group.date
-         [input edited-attrs]
-         [:div.input-group-addon
-          [:i.glyphicon.glyphicon-calendar]]]))
+          [:div.input-group.date
+           [input edited-attrs]
+           [:div.input-group-addon
+            [:i.glyphicon.glyphicon-calendar]]]))
      
      :component-did-mount
      (fn [this]
@@ -177,5 +218,4 @@
                    (rf/dispatch [:set (:name attrs)
                                  (.getTime d)])))))}))
                
-
 ; file
