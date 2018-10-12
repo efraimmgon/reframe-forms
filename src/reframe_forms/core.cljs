@@ -9,42 +9,12 @@
 ; setting the default value of the :name path to be the one you want
 ; to be the default.
 
-(defn- keyword-or-int [x]
-  (let [parsed (js/parseInt x)]
-    (if (int? parsed)
-      parsed
-      (keyword x))))
-
-(defn vec-of-keys [x]
-  (if (vector? x)
-    x
-    (mapv keyword-or-int
-          (if (qualified-keyword? x)
-            (into (string/split (namespace x) ".")
-                  (string/split (name x) "."))
-            (string/split (name x) ".")))))
-
-(rf/reg-sub
-  :query
-  (fn [db [_ path]]
-    (get-in db (vec-of-keys path))))
-
-(rf/reg-event-db
-  :set
-  (fn [db [_ path val]]
-    (assoc-in db (vec-of-keys path) val)))
-
-(rf/reg-event-db
-  :update
-  (fn [db [_ path f]]
-    (update-in db (vec-of-keys path) f)))
-
 ; -----------------------------------------------------------------------------
 ; Input Components Utils
 ; -----------------------------------------------------------------------------
 
 (defn get-stored-val [path]
-  (rf/subscribe [:query path]))
+  (rf/subscribe [:reframe-forms/query path]))
 
 (defn target-value [event]
   (.-value (.-target event)))
@@ -65,14 +35,14 @@
       parsed)))
 
 (defn attrs-on-change-set [attrs f]
-  (assoc attrs :on-change #(rf/dispatch [:set (:name attrs) (f %)])))
+  (assoc attrs :on-change #(rf/dispatch [:reframe-forms/set (:name attrs) (f %)])))
 
 (defn attrs-on-change-update [attrs f]
-  (assoc attrs :on-change #(rf/dispatch [:update (:name attrs) f])))
+  (assoc attrs :on-change #(rf/dispatch [:reframe-forms/update (:name attrs) f])))
 
 (defn attrs-on-change-multiple [attrs val]
   (assoc attrs :on-change 
-    #(rf/dispatch [:update (:name attrs)
+    #(rf/dispatch [:reframe-forms/update (:name attrs)
                    (fn [acc]
                      (if (contains? acc val) 
                        (disj acc val)
@@ -223,7 +193,7 @@
            (.on "changeDate"
                 #(let [d (.datepicker (js/$ (r/dom-node this))
                                       "getDate")]
-                   (rf/dispatch [:set (:name attrs)
+                   (rf/dispatch [:reframe-forms/set (:name attrs)
                                  (.getTime d)])))))}))
                
 ; file
