@@ -34,23 +34,35 @@
       (str parsed)
       parsed)))
 
-(defn attrs-on-change-set [attrs f]
-  (assoc attrs :on-change #(rf/dispatch [:reframe-forms/set (:name attrs) (f %)])))
+(defn on-change-set! 
+  "Takes a path and a function and returns a handler.
+  The function will be called on the DOM event object."
+  [path f]
+  (fn [event]
+    (rf/dispatch [:reframe-forms/set path (f event)])))
 
-(defn attrs-on-change-update [attrs f]
-  (assoc attrs :on-change #(rf/dispatch [:reframe-forms/update (:name attrs) f])))
+(defn on-change-update! 
+  "Takes a path and a function and returns a handler.
+  The function will be called on the value stored at path."
+  [path f]
+  (fn [event]
+    (rf/dispatch [:reframe-forms/update path f])))
 
-(defn attrs-on-change-multiple [attrs val]
-  (assoc attrs :on-change 
-    #(rf/dispatch [:reframe-forms/update (:name attrs)
-                   (fn [acc]
-                     (if (contains? acc val) 
-                       (disj acc val)
-                       ((fnil conj #{}) acc val)))])))
+(defn on-change-update-multiple! 
+  "Takes a path and a value and returns a handler.
+  The value will be disj'ed or conj'ed, depending if it is included or
+  not at path."
+  [path value]
+  (fn [_]
+    (let [f (fn [acc]
+              (if (contains? acc val)
+                (disj acc val)
+                ((fnil conj #{}) acc val)))]
+      (rf/dispatch [:reframe-forms/update path f]))))
 
-; Reason for `""`: https://zhenyong.github.io/react/tips/controlled-input-null-value.html
-(defn attrs-value [attrs stored-val]
-  (assoc attrs :value (or @stored-val "")))
+; NOTE: Reason for `""`: https://zhenyong.github.io/react/tips/controlled-input-null-value.html
+(defn value-attr [value]
+  (or value ""))
 
 ; -----------------------------------------------------------------------------
 ; Input Components
@@ -62,42 +74,49 @@
 (defmethod input :default
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
-        edited-attrs (-> attrs 
-                         (attrs-on-change-set target-value)
-                         (attrs-value stored-val))]
+        edited-attrs 
+        (merge {:on-change (on-change-set! (:name attrs) target-value)
+                :value (value-attr @stored-val)}
+               attrs)]
     [:input edited-attrs]))
 
 (defmethod input :number
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
-        edited-attrs (-> attrs
-                         (attrs-on-change-set (comp parse-number target-value))
-                         (attrs-value stored-val))]
+        edited-attrs
+        (merge {:on-change (on-change-set! (:name attrs) 
+                                           (comp parse-number target-value))
+                :value (value-attr @stored-val)}
+               attrs)]
     [:input edited-attrs]))
 
 (defn textarea 
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
-        edited-attrs (-> attrs
-                         (attrs-on-change-set target-value)
-                         (attrs-value stored-val))]
+        edited-attrs
+        (merge {:on-change (on-change-set! (:name attrs) target-value)
+                :value (value-attr @stored-val)}
+               attrs)]
     [:textarea edited-attrs]))
 
 (defmethod input :radio
   [attrs]
   (let [{:keys [name value]} attrs
         stored-val (get-stored-val name)
-        edited-attrs (-> attrs
-                         (attrs-on-change-set (comp read-string* target-value))
-                         (assoc :checked (= value @stored-val)))]
+        edited-attrs
+        (merge {:on-change (on-change-set! name
+                                           (comp read-string* target-value))
+                :checked (= value @stored-val)}
+               attrs)]
     [:input edited-attrs]))
                           
 (defmethod input :checkbox
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
-        edited-attrs (-> attrs
-                         (attrs-on-change-update not)
-                         (assoc :checked (boolean @stored-val)))]
+        edited-attrs
+        (merge {:on-change (on-change-update! (:name attrs) not)
+                :checked (boolean @stored-val)}
+               attrs)]
     [:input edited-attrs]))
 
 ; Uses plain HTML5 <input type="date" />
@@ -133,29 +152,32 @@
   [attrs]
   ; :value must be a string in the format "yyyy-mm-dd".
   (let [{:keys [name save-fn value-fn]
-         :or {save-fn to-iso-string
-              value-fn to-date-format}} attrs
+         :or   {save-fn to-iso-string,
+                value-fn to-date-format}} 
+        attrs
         stored-val (get-stored-val name)
-        edited-attrs (-> attrs
-                         (attrs-on-change-set (comp save-fn target-value))
-                         (assoc :value (value-fn @stored-val))
-                         ;; If no browser support and it degrades to a text
-                         ;; input, then at least we'll display the expected
-                         ;; format, and ...
-                         (update :placeholder #(or % "yyyy-mm-dd"))
-                         ;; ... we'll display an error message the wrong 
-                         ;; format is submitted.
-                         (update :pattern #(or % "[0-9]{4}-[0-9]{2}-[0-9]{2}")))]
+        edited-attrs
+        (merge {:on-change (on-change-set! name (comp save-fn target-value))
+                :value (value-fn @stored-val)
+                ;; If there's no browser support,
+                ;; then at least we'll display the expected
+                ;; format, and ...
+                :placeholder "yyyy-mm-dd"
+                ;; ... we'll display an error message if the wrong 
+                ;; format is submitted.
+                :pattern "[0-9]{4}-[0-9]{2}-[0-9]{2}"}
+               attrs)]
     [:input edited-attrs]))
 
 (defn select 
   [attrs options]
   (let [{:keys [name multiple]} attrs
         stored-val (get-stored-val (:name attrs))
-        on-change-fn (if multiple attrs-on-change-multiple attrs-on-change-set)
-        edited-attrs (-> attrs
-                         (on-change-fn (comp read-string* target-value))
-                         (attrs-value stored-val))]
+        on-change-fn! (if multiple on-change-update-multiple! on-change-set!)
+        edited-attrs
+        (merge {:on-change (on-change-fn! name (comp read-string* target-value))
+                :value (value-attr @stored-val)}
+               attrs)]
     [:selected edited-attrs
      options]))
 
