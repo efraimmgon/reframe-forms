@@ -13,6 +13,9 @@
 ; Input Components Utils
 ; -----------------------------------------------------------------------------
 
+(defn clean-attrs [attrs]
+  (dissoc attrs :save-fn
+                :value-fn))
 (defn get-stored-val [path]
   (rf/subscribe [:reframe-forms/query path]))
 
@@ -166,7 +169,7 @@
                 ;; ... we'll display an error message if the wrong 
                 ;; format is submitted.
                 :pattern "[0-9]{4}-[0-9]{2}-[0-9]{2}"}
-               attrs)]
+               (clean-attrs attrs))]
     [:input edited-attrs]))
 
 (defn select 
