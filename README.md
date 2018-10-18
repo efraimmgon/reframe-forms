@@ -14,7 +14,7 @@ Before anything else: our components rely on a set of `re-frame` events and subs
 
 (The subscription `:reframe-forms/query` to get values and the events `:reframe-forms/set` and `reframe-forms/update` to set/update values.)
 
-You must either require `reframe-forms.events` to register the default events:
+You must require `reframe-forms.events` to register the default events:
 
 ```clojure
 (ns mywebsite.events
@@ -32,11 +32,17 @@ Or you can come up with your own implementation, of course. In either case I sug
 
 The functionality rests on the `input` multimethod, and the `textarea` and `select` functions, at the `reframe-forms.core` namespace.
 
-`input` creates an input tag based on the `:type` key.
+`input` is dispatches on the `:type` key and returns an input component.
 
-Data binding occurs based on the `:name` value (either a keyword, or a vector of keys). It is used as a location in re-frame's `app-db`. `:blog.post/title` (or `[:blog :post :title]`), for instance, will  point to `{:blog {:post {:title ->input-data-here<-}}}`.
+```clojure
+; A number input:
+[input {:name :user/age
+        :type :number}]
+```
 
-All the `input`s require only the `:name` value, with one exception: the `:radio` input requires a `:value` attribute.
+Data binding occurs based on the `:name` key (either a keyword, or a vector of keys). It is used as a location in re-frame's `app-db`. `:blog.post/title` (or `[:blog :post :title]`), for instance, will  point to `{:blog {:post {:title ->input-data-here<-}}}`.
+
+All the `input`s require only the `:name` and `:type` keys, with one exception: the `:radio` input requires a `:value` attribute.
 
 The `select` input takes an optional `:multiple` attribute. If it is truthy, one or more values can be collected (into a set), and if falsey only one. As a second parameter `select` takes a coll of options with a `:value` attribute:
 
@@ -47,7 +53,7 @@ The `select` input takes an optional `:multiple` attribute. If it is truthy, one
     [:option {:value "Portugal"}]]
 ```
 
-For now, the way to set default values for the inputs one can set the value to the location of the :name attribute of the input. For instance, in the previous example, if we want `select` to have "Portugal" as its default value, we can set the :country key thusly:
+There is no built-in way to set defaults. For instance, in the previous example, if we want `select` to have "Portugal" as its default value, we can do it the following way:
 
 ```clojure
 (rf/dispatch [:reframe-forms/set [:user :country] #{"Portugal"}])
@@ -60,15 +66,40 @@ For now, the way to set default values for the inputs one can set the value to t
 Here is a usage example of several input types:
 
 ```clojure
-; assume we have some helper components defined at my-website.components
 (ns my-website.blog
   (:require
-   [my-website.components :refer [card form-group]]
    [reagent.core :as r]
    [re-frame.core :as rf]
    [reframe-forms.core :refer [input textarea]]))
+;-----------------------------------------------------------------------------
+; Helper components
+
+(defn form-group 
+  "Bootstrap's `form-group` component."
+  [label & input]
+  [:div.form-group
+   [:label label]
+   (into
+    [:div]
+    input)])
+
+(defn card [{:keys [title subtitle body footer attrs]}]
+  [:div.card
+   attrs
+   [:div.card-body
+     [:h4.card-title.text-center title]
+     (when subtitle
+       [:p.card-category subtitle])
+     [:div.card-text
+      content]
+     [:div.card-footer
+      footer]]])
+
+;-----------------------------------------------------------------------------
+; Main components
 
 (defn blog-post-form [fields]
+  ;; Set default status:
   (when (nil? @fields)
     (rf/dispatch [:set :blog.post/status "published"]))
   (fn []
@@ -115,10 +146,8 @@ Here is a usage example of several input types:
           [:button.btn.btn-primary
            {:on-click #(rf/dispatch [:blog/create-post fields])}
            "Save post"]]]
-       :content
-       [:div
-        [blog-post-form fields]]}]]))
-
+       :body
+       [blog-post-form fields]}]]))
 ```
 
 ## License
