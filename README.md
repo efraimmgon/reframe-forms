@@ -1,20 +1,44 @@
 # reframe-forms
 
-A ClojureScript library to provide form data bindings for [re-frame](https://github.com/Day8/re-frame)
+A ClojureScript library to provide form data bindings for [re-frame](https://github.com/Day8/re-frame).
 
 ## Install
 
-[reframe-forms "0.1.0-SNAPSHOT"]
+`[reframe-forms "0.1.0-SNAPSHOT"]`
 
 ## Usage
 
+### IMPORTANT
+
+Before anything else: our components rely on a set of `re-frame` events and subs to work.
+
+(The subscription `:reframe-forms/query` to get values and the events `:reframe-forms/set` and `reframe-forms/update` to set/update values.)
+
+You must either require `reframe-forms.events` to register the default events:
+
+```clojure
+(ns mywebsite.events
+  (:require
+    [mywebsite.db :as db]
+    [reframe-forms.events] ; <-------
+    [re-frame.core :as rf]))
+
+  ...
+```
+
+Or you can come up with your own implementation, of course. In either case I suggest you take a look at the source code if you are curious (or confused) about our implementation. I'm no MIT graduate, so it's very simple code, really.
+
+### Input types
+
+The functionality rests on the `input` multimethod, and the `textarea` and `select` functions, at the `reframe-forms.core` namespace.
+
 `input` creates an input tag based on the `:type` key.
 
-Data binding occurs based on the `:name` key. The name key is destructured and used as a location in the `app-db`. `:blog.post/title`, for instance, will  point to `{:blog {:post {:title input-data-here}}}`.
+Data binding occurs based on the `:name` value (either a keyword, or a vector of keys). It is used as a location in re-frame's `app-db`. `:blog.post/title` (or `[:blog :post :title]`), for instance, will  point to `{:blog {:post {:title ->input-data-here<-}}}`.
 
-The `:radio` input requires a `:value` attribute, and the `textarea`, `select` tags are defined as separate functions.
+All the `input`s require only the `:name` value, with one exception: the `:radio` input requires a `:value` attribute.
 
-The `select` input takes an optional `:multiple` attribute. If it is truthy, one or more values can be selected (into a set), and if falsey only one. As a second parameter `select` takes a coll of options with a `:value` attribute:
+The `select` input takes an optional `:multiple` attribute. If it is truthy, one or more values can be collected (into a set), and if falsey only one. As a second parameter `select` takes a coll of options with a `:value` attribute:
 
 ```clojure
 [select {:name :user/country, :multiple true}
@@ -23,15 +47,20 @@ The `select` input takes an optional `:multiple` attribute. If it is truthy, one
     [:option {:value "Portugal"}]]
 ```
 
-To set default values for the inputs you must set the value to the location of the :name attribute of the input. For instance, in the previous example, if we want `select` to have "Portugal" as its default value, we must set the :country key somehow,
+For now, the way to set default values for the inputs one can set the value to the location of the :name attribute of the input. For instance, in the previous example, if we want `select` to have "Portugal" as its default value, we can set the :country key thusly:
 
 ```clojure
-(rf/dispatch [:set [:user :country] #{"Portugal"}])
+(rf/dispatch [:reframe-forms/set [:user :country] #{"Portugal"}])
+
+;; Note that if :multiple is not set to true, we would set 
+;; the default value for select differently:
+(rf/dispatch [:reframe-forms/set [:user :country] "Portugal"])
 ```
 
-Here is an example usage of several input types:
+Here is a usage example of several input types:
 
 ```clojure
+; assume we have some helper components defined at my-website.components
 (ns my-website.blog
   (:require
    [my-website.components :refer [card form-group]]
