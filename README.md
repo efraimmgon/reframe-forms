@@ -71,6 +71,7 @@ Here is a usage example of several input types:
    [reagent.core :as r]
    [re-frame.core :as rf]
    [reframe-forms.core :refer [input textarea]]))
+
 ;-----------------------------------------------------------------------------
 ; Helper components
 
@@ -152,7 +153,6 @@ Here is a usage example of several input types:
 
 ## License
 
-Copyright © 2018 FIXME
+Copyright © 2018.
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the Eclipse Public License either version 1.0 or any later version.
