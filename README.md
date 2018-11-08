@@ -53,14 +53,13 @@ The `select` input takes an optional `:multiple` attribute. If it is truthy, one
     [:option {:value "Portugal"}]]
 ```
 
-There is no built-in way to set defaults. For instance, in the previous example, if we want `select` to have "Portugal" as its default value, we can do it the following way:
+To set default values one has to give a key of `:default-value` for the text `input`s and the `select`. For the `:checkbox` and `:radio` one must simply assign a `:checked?` `true`. Here's an example:
 
 ```clojure
-(rf/dispatch [:reframe-forms/set [:user :country] #{"Portugal"}])
-
-;; Note that if :multiple is not set to true, we would set 
-;; the default value for select differently:
-(rf/dispatch [:reframe-forms/set [:user :country] "Portugal"])
+[select {:name :user/country, :multiple true, :default-value "United States of America"}
+    [:option {:value "Brazil"}]
+    [:option {:value "United States of America"}]
+    [:option {:value "Portugal"}]]
 ```
 
 Here is a usage example of several input types:
@@ -100,9 +99,6 @@ Here is a usage example of several input types:
 ; Main components
 
 (defn blog-post-form [fields]
-  ;; Set default status:
-  (when (nil? @fields)
-    (rf/dispatch [:set :blog.post/status "published"]))
   (fn []
     [:div 
      [form-group
@@ -118,10 +114,12 @@ Here is a usage example of several input types:
                  :value "draft"
                  :class "form-check-input"}]
          " Draft"]
+       ;; The default.
        [:label.form-check-label
         [input {:type :radio
                 :name :blog.post/status
                 :value "published"
+                :checked? true
                 :class "form-check-input"}]
         " Published"]]
      [form-group
