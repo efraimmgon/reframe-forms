@@ -79,7 +79,6 @@
 
 ; text, email, password
 (defmethod input :default
-  {:arglists '([{:keys [name default-value]}])}
   [attrs]
   (let [{:keys [name default-value]} attrs
         stored-val (get-stored-val name)
@@ -95,7 +94,6 @@
     [:input edited-attrs]))
 
 (defmethod input :number
-  {:arglists '([{:keys [name default-value]}])}
   [attrs]
   (let [{:keys [name default-value]} attrs
         stored-val (get-stored-val name)
@@ -112,7 +110,6 @@
     [:input edited-attrs]))
 
 (defn textarea
-  {:arglists '([{:keys [name default-value]}])}
   [attrs]
   (let [{:keys [name default-value]} attrs
         stored-val (get-stored-val name)
@@ -128,7 +125,6 @@
     [:textarea edited-attrs]))
 
 (defmethod input :radio
-  {:arglists '([{:keys [name value checked?]}])}
   [attrs]
   (let [{:keys [name value checked?]} attrs
         stored-val (get-stored-val name)
@@ -145,7 +141,6 @@
     [:input edited-attrs]))
                           
 (defmethod input :checkbox
-  {:arglists '([{:keys [name checked?]}])}
   [attrs]
   (let [{:keys [name checked?]} attrs
         stored-val (get-stored-val name)
@@ -193,7 +188,6 @@
         first)))
       
 (defmethod input :date
-  {:arglists '([{:keys [default-value name save-fn value-fn]}])}
   [attrs]
   ; :value must be a string in the format "yyyy-mm-dd".
   (let [{:keys [default-value name save-fn value-fn]
@@ -220,7 +214,6 @@
     [:input edited-attrs]))
 
 (defn select 
-  {:arglists '([{:keys [name multiple default-value]}])}
   [attrs options]
   (let [{:keys [name multiple default-value]} attrs
         stored-val (get-stored-val name)
