@@ -15,7 +15,9 @@
 
 (defn clean-attrs [attrs]
   (dissoc attrs :save-fn
-                :value-fn))
+                :value-fn
+                :default-value
+                :checked?))
 (defn get-stored-val [path]
   (rf/subscribe [:reframe-forms/query path]))
 
@@ -51,17 +53,19 @@
   (fn [event]
     (rf/dispatch [:reframe-forms/update path f])))
 
+(defn multiple-opts-fn [value]
+  (fn [acc]
+    (if (contains? acc value)
+      (disj acc value)
+      ((fnil conj #{}) acc value))))
+
 (defn on-change-update-multiple! 
   "Takes a path and a value and returns a handler.
   The value will be disj'ed or conj'ed, depending if it is included or
   not at path."
   [path value]
-  (fn [_]
-    (let [f (fn [acc]
-              (if (contains? acc val)
-                (disj acc val)
-                ((fnil conj #{}) acc val)))]
-      (rf/dispatch [:reframe-forms/update path f]))))
+  (fn [_])
+  (rf/dispatch [:reframe-forms/update path (multiple-opts-fn value)]))
 
 ; NOTE: Reason for `""`: https://zhenyong.github.io/react/tips/controlled-input-null-value.html
 (defn value-attr [value]
@@ -75,56 +79,88 @@
 
 ; text, email, password
 (defmethod input :default
-  {:arglists '([{:keys [name]}])}
+  {:arglists '([{:keys [name default-value]}])}
   [attrs]
-  (let [stored-val (get-stored-val (:name attrs))
+  (let [{:keys [name default-value]} attrs
+        stored-val (get-stored-val name)
         edited-attrs 
-        (merge {:on-change (on-change-set! (:name attrs) target-value)
+        (merge {:on-change (on-change-set! name target-value)
                 :value (value-attr @stored-val)}
-               attrs)]
+               (clean-attrs attrs))]
+    
+    (when (and (nil? @stored-val)
+               default-value)
+      (rf/dispatch [:reframe-forms/set name default-value]))
+    
     [:input edited-attrs]))
 
 (defmethod input :number
-  {:arglists '([{:keys [name]}])}
+  {:arglists '([{:keys [name default-value]}])}
   [attrs]
-  (let [stored-val (get-stored-val (:name attrs))
+  (let [{:keys [name default-value]} attrs
+        stored-val (get-stored-val name)
         edited-attrs
-        (merge {:on-change (on-change-set! (:name attrs) 
+        (merge {:on-change (on-change-set! name
                                            (comp parse-number target-value))
                 :value (value-attr @stored-val)}
-               attrs)]
+               (clean-attrs attrs))]
+    
+    (when (and (nil? @stored-val)
+               default-value)
+      (rf/dispatch [:reframe-forms/set name default-value]))
+    
     [:input edited-attrs]))
 
 (defn textarea
-  {:arglists '([{:keys [name]}])}
+  {:arglists '([{:keys [name default-value]}])}
   [attrs]
-  (let [stored-val (get-stored-val (:name attrs))
+  (let [{:keys [name default-value]} attrs
+        stored-val (get-stored-val name)
         edited-attrs
-        (merge {:on-change (on-change-set! (:name attrs) target-value)
+        (merge {:on-change (on-change-set! name target-value)
                 :value (value-attr @stored-val)}
-               attrs)]
+               (clean-attrs attrs))]
+    
+    (when (and (nil? @stored-val)
+               default-value)
+      (rf/dispatch [:reframe-forms/set name default-value]))
+    
     [:textarea edited-attrs]))
 
 (defmethod input :radio
-  {:arglists '([{:keys [name]}])}
+  {:arglists '([{:keys [name value checked?]}])}
   [attrs]
-  (let [{:keys [name value]} attrs
+  (let [{:keys [name value checked?]} attrs
         stored-val (get-stored-val name)
         edited-attrs
         (merge {:on-change (on-change-set! name
                                            (comp read-string* target-value))
                 :checked (= value @stored-val)}
-               attrs)]
+               (clean-attrs attrs))]
+    
+    (when (and (nil? @stored-val)
+               checked?)
+      (rf/dispatch [:reframe-forms/set name value]))
+    
     [:input edited-attrs]))
                           
 (defmethod input :checkbox
-  {:arglists '([{:keys [name]}])}
+  {:arglists '([{:keys [name checked?]}])}
   [attrs]
-  (let [stored-val (get-stored-val (:name attrs))
+  (let [{:keys [name checked?]} attrs
+        stored-val (get-stored-val name)
         edited-attrs
-        (merge {:on-change (on-change-update! (:name attrs) not)
+        (merge {:on-change (on-change-update! name not)
                 :checked (boolean @stored-val)}
-               attrs)]
+               (clean-attrs attrs))]
+    
+    (cond (and (nil? @stored-val)
+               checked?)
+          (rf/dispatch [:reframe-forms/set name true])
+          
+          (nil? @stored-val)
+          (rf/dispatch [:reframe-forms/set name false]))
+    
     [:input edited-attrs]))
 
 ; Uses plain HTML5 <input type="date" />
@@ -157,10 +193,10 @@
         first)))
       
 (defmethod input :date
-  {:arglists '([{:keys [name save-fn value-fn]}])}
+  {:arglists '([{:keys [default-value name save-fn value-fn]}])}
   [attrs]
   ; :value must be a string in the format "yyyy-mm-dd".
-  (let [{:keys [name save-fn value-fn]
+  (let [{:keys [default-value name save-fn value-fn]
          :or   {save-fn to-iso-string,
                 value-fn to-date-format}} 
         attrs
@@ -176,18 +212,30 @@
                 ;; format is submitted.
                 :pattern "[0-9]{4}-[0-9]{2}-[0-9]{2}"}
                (clean-attrs attrs))]
+    
+    (when (and (nil? @stored-val)
+               default-value)
+      (rf/dispatch [:reframe-forms/set name (save-fn default-value)]))
+    
     [:input edited-attrs]))
 
 (defn select 
-  {:arglists '([{:keys [name multiple]}])}
+  {:arglists '([{:keys [name multiple default-value]}])}
   [attrs options]
-  (let [{:keys [name multiple]} attrs
-        stored-val (get-stored-val (:name attrs))
+  (let [{:keys [name multiple default-value]} attrs
+        stored-val (get-stored-val name)
         on-change-fn! (if multiple on-change-update-multiple! on-change-set!)
         edited-attrs
         (merge {:on-change (on-change-fn! name (comp read-string* target-value))
                 :value (value-attr @stored-val)}
                attrs)]
+    
+    (when (and (nil? @stored-val)
+               default-value)
+      (if multiple
+        (rf/dispatch [:reframe-forms/update name (multiple-opts-fn default-value)])
+        (rf/dispatch [:reframe-forms/set name default-value])))
+    
     [:selected edited-attrs
      options]))
 
