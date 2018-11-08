@@ -75,6 +75,7 @@
 
 ; text, email, password
 (defmethod input :default
+  {:arglists '([{:keys [name]}])}
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
         edited-attrs 
@@ -84,6 +85,7 @@
     [:input edited-attrs]))
 
 (defmethod input :number
+  {:arglists '([{:keys [name]}])}
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
         edited-attrs
@@ -93,7 +95,8 @@
                attrs)]
     [:input edited-attrs]))
 
-(defn textarea 
+(defn textarea
+  {:arglists '([{:keys [name]}])}
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
         edited-attrs
@@ -103,6 +106,7 @@
     [:textarea edited-attrs]))
 
 (defmethod input :radio
+  {:arglists '([{:keys [name]}])}
   [attrs]
   (let [{:keys [name value]} attrs
         stored-val (get-stored-val name)
@@ -114,6 +118,7 @@
     [:input edited-attrs]))
                           
 (defmethod input :checkbox
+  {:arglists '([{:keys [name]}])}
   [attrs]
   (let [stored-val (get-stored-val (:name attrs))
         edited-attrs
@@ -151,7 +156,8 @@
         (clojure.string/split #"T")
         first)))
       
-(defmethod input :date  
+(defmethod input :date
+  {:arglists '([{:keys [name save-fn value-fn]}])}
   [attrs]
   ; :value must be a string in the format "yyyy-mm-dd".
   (let [{:keys [name save-fn value-fn]
@@ -173,6 +179,7 @@
     [:input edited-attrs]))
 
 (defn select 
+  {:arglists '([{:keys [name multiple]}])}
   [attrs options]
   (let [{:keys [name multiple]} attrs
         stored-val (get-stored-val (:name attrs))
