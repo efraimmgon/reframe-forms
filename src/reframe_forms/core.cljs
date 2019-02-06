@@ -213,6 +213,12 @@
     
     [:input edited-attrs]))
 
+; NOTE: if you want to select multiple, you must provide the multiple key
+; with a truthy value.
+; NOTE: You must provide a default-value with the default-value, or set the
+; default-value on the name path. `default-value` is playing the selected
+; part. Maybe default the default-value to the first option when there's no
+; stored-val and no default-value.
 (defn select 
   [attrs options]
   (let [{:keys [name multiple default-value]} attrs
@@ -221,16 +227,16 @@
         edited-attrs
         (merge {:on-change (on-change-fn! name (comp read-string* target-value))
                 :value (value-attr @stored-val)}
-               attrs)]
+               (clean-attrs attrs))]
     
     (when (and (nil? @stored-val)
                default-value)
       (if multiple
         (rf/dispatch [:reframe-forms/update name (multiple-opts-fn default-value)])
         (rf/dispatch [:reframe-forms/set name default-value])))
-    
-    [:selected edited-attrs
-     options]))
+    (into
+     [:select edited-attrs]
+     options)))
 
 ;;; TODO: try Pickaday datepicker
 
