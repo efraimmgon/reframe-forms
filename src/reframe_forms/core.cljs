@@ -19,7 +19,7 @@
                 :default-value
                 :checked?))
 (defn get-stored-val [path]
-  (rf/subscribe [:reframe-forms/query path]))
+  (rf/subscribe [:rff/query path]))
 
 (defn target-value [event]
   (.-value (.-target event)))
@@ -44,14 +44,14 @@
   The function will be called on the DOM event object."
   [path f]
   (fn [event]
-    (rf/dispatch [:reframe-forms/set path (f event)])))
+    (rf/dispatch [:rff/set path (f event)])))
 
 (defn on-change-update! 
   "Takes a path and a function and returns a handler.
   The function will be called on the value stored at path."
   [path f]
   (fn [event]
-    (rf/dispatch [:reframe-forms/update path f])))
+    (rf/dispatch [:rff/update path f])))
 
 (defn multiple-opts-fn [value]
   (fn [acc]
@@ -65,7 +65,7 @@
   not at path."
   [path value]
   (fn [_])
-  (rf/dispatch [:reframe-forms/update path (multiple-opts-fn value)]))
+  (rf/dispatch [:rff/update path (multiple-opts-fn value)]))
 
 ; NOTE: Reason for `""`: https://zhenyong.github.io/react/tips/controlled-input-null-value.html
 (defn value-attr [value]
@@ -89,7 +89,7 @@
     
     (when (and (nil? @stored-val)
                default-value)
-      (rf/dispatch [:reframe-forms/set name default-value]))
+      (rf/dispatch [:rff/set name default-value]))
     
     [:input edited-attrs]))
 
@@ -105,7 +105,7 @@
     
     (when (and (nil? @stored-val)
                default-value)
-      (rf/dispatch [:reframe-forms/set name default-value]))
+      (rf/dispatch [:rff/set name default-value]))
     
     [:input edited-attrs]))
 
@@ -120,7 +120,7 @@
     
     (when (and (nil? @stored-val)
                default-value)
-      (rf/dispatch [:reframe-forms/set name default-value]))
+      (rf/dispatch [:rff/set name default-value]))
     
     [:textarea edited-attrs]))
 
@@ -136,11 +136,12 @@
     
     (when (and (nil? @stored-val)
                checked?)
-      (rf/dispatch [:reframe-forms/set name value]))
+      (rf/dispatch [:rff/set name value]))
     
     [:input edited-attrs]))
-                          
+     
 (defmethod input :checkbox
+  "Each checkbox name is stored as a map key, pointing to a boolean."
   [attrs]
   (let [{:keys [name checked?]} attrs
         stored-val (get-stored-val name)
@@ -151,10 +152,10 @@
     
     (cond (and (nil? @stored-val)
                checked?)
-          (rf/dispatch [:reframe-forms/set name true])
+          (rf/dispatch [:rff/set name true])
           
           (nil? @stored-val)
-          (rf/dispatch [:reframe-forms/set name false]))
+          (rf/dispatch [:rff/set name false]))
     
     [:input edited-attrs]))
 
@@ -209,7 +210,7 @@
     
     (when (and (nil? @stored-val)
                default-value)
-      (rf/dispatch [:reframe-forms/set name (save-fn default-value)]))
+      (rf/dispatch [:rff/set name (save-fn default-value)]))
     
     [:input edited-attrs]))
 
@@ -232,8 +233,8 @@
     (when (and (nil? @stored-val)
                default-value)
       (if multiple
-        (rf/dispatch [:reframe-forms/update name (multiple-opts-fn default-value)])
-        (rf/dispatch [:reframe-forms/set name default-value])))
+        (rf/dispatch [:rff/update name (multiple-opts-fn default-value)])
+        (rf/dispatch [:rff/set name default-value])))
     (into
      [:select edited-attrs]
      options)))
@@ -272,7 +273,7 @@
            (.on "changeDate"
                 #(let [d (.datepicker (js/$ (r/dom-node this))
                                       "getDate")]
-                   (rf/dispatch [:reframe-forms/set (:name attrs)
+                   (rf/dispatch [:rff/set (:name attrs)
                                  (.getTime d)])))))}))
                
 ; file

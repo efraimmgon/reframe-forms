@@ -20,16 +20,16 @@
             (string/split (name x) ".")))))
 
 (rf/reg-sub
-  :reframe-forms/query
+  :rff/query
   (fn [db [_ path]]
     (get-in db (vec-of-keys path))))
 
 (rf/reg-event-db
-  :reframe-forms/set
+  :rff/set
   (fn [db [_ path val]]
     (assoc-in db (vec-of-keys path) val)))
 
 (rf/reg-event-db
-  :reframe-forms/update
+  :rff/update
   (fn [db [_ path f]]
     (update-in db (vec-of-keys path) f)))
